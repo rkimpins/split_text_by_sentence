@@ -1,60 +1,22 @@
-def test_split_text():
-    abbr = [ "Mr.", "mr.", "MR.", "Mrs.", "MRS.", "mrs.", "MRs.", "M.", "Dr.", "DR.", "dr.", "Q." "R." ]
-    cap = [ "Mr", "Mrs", "Ramsey", "Lily", "Briscoe", "James", "Paul", "Rayley", "Minta", "Doyle", "Charles",
-        "Tansley", "William", "Bankes", "Augustus", "Carmichael", "Andrew", "Jasper", "Roger", "Prue", "Nancy", "Cam",
-        "McNab", "Macalister", "Scott" ] 
-
-    text_1 = """br. br! br? "br!" she said. "br. br." "br!" she said. "br!" br. "br!" Ramsey said."""
-    expected_1 = [
-        'br.',
-        'br!',
-        'br?',
-        '"br!" she said.',
-        '"br. br."',
-        '"br!" she said.',
-        '"br!" br.',
-        '"br!" Ramsey said.'
-        ]
-    assert split_text(text_1, abbreviations=abbr, capitalized=cap) == expected_1
-    text_2 = """("br." br). br."""
-    expected_2 = [
-        '("br." br).',
-        'br.'
-    ]
-#[("\"", "\""), ("“", "”")]
-    assert split_text(text_2, abbreviations=abbr, capitalized=cap, 
-    quotations=[("\"", "\""), ("“", "”"), ("(", ")")]) == expected_2
-    #text_3 = """("br.") Br."""
-    #expected_3 = [
-    #    '("br.")',
-    #    'Br.'
-    #]
-    #assert split_text(text_3, abbreviations=abbr, capitalized=cap, 
-    #quotations=[("\"", "\""), ("“", "”"), ("(", ")")]) == expected_3
-
-
-def test_match_abbreviation():
-    assert match_abbreviation("abc mr. and that mrs.", 4, ["Mr.", "mr.", "mrs."])
-    assert not match_abbreviation("abc mr. and that mrs.", 5, ["Mr.", "mr.", "mrs."])
-    assert not match_abbreviation("abc mr. and that mrs.", 6, ["Mr.", "mr.", "mrs."])
-    assert match_abbreviation("abc mr. and that mrs.", 17, ["Mr.", "mr.", "mrs."])
-    assert not match_abbreviation("abc mr. and that mrs.", 18, ["Mr.", "mr.", "mrs."])
-
 # Given a piece of text, a position, and a list of abbreviations
 # checks if current position is at the start of an abbreviation
 def match_abbreviation(text, pos, abbrs):
+    """Checks if the current text position matches the start of an abbreviation"""
+
     for abbr in abbrs:
         if text[pos:pos + len(abbr)] == abbr:
             return True
     return False
 
-def is_name(text, pos, names):
-    for name in names:
-        if text[pos:pos+len(name)] == name:
+def is_capitalized(text, pos, caps):
+    """Checks if the current text position matches that start of a capitalized word"""
+    for cap in caps:
+        if text[pos:pos+len(cap)] == cap:
             return True
     return False
 
 def only_one_true(bool_list):
+    """Returns True if exactly one element of a list is True"""
     counter = 0
     for val in bool_list:
         if val:
@@ -63,19 +25,41 @@ def only_one_true(bool_list):
 
 def split_text(text, abbreviations=[], capitalized=[], quotations=[("\"", "\""), ("“", "”")],
 terminating_characters = ["!","?","."], full_stop_characters = ["."]):
-    in_quotes = [False for _ in range(len(quotations))]
-    #in_quotes = False
-    result = []
-    open_quotations = [x[0] for x in quotations]
-    close_quotations = [x[1] for x in quotations]
-    #print(open_quotations)
+    """Splits a piece of text into a list of sentences
 
-    #open_quotations = ["\"", "“"]
-    #close_quotations = ["\"", "”"]
+    Parameters
+    ----------
+    text: string
+        the text that we wish to split by sentence
+    abbreviations: list[string]
+        list of abbreviations that we want to avoid splitting on (each ends in a period)
+    capitalized: list[string]
+        list of words that are always capitalized in our text, mostly names
+        It is rarely necessary to include words other than names
+    quotations: list[(char, char)]
+        tuple of opening and closing quotations
+        Most common choices are: "", “”, (), [], {}, ‘’, ——
+        Not, single quotations are not advised since program doesn't differentiate their
+        appearance in contraction like "don't"
+    terminating_characters: list[char]
+        list of characters that terminate a sentence
+    full_stop_characters: list[char]
+        list of characters that terminate a sentence in quotations
 
-    """
-    Break Logic
-    -----------
+    Returns
+    -------
+    list[string]
+        list of split sentences
+
+
+    There are a few important notes to make.
+    This program does not break sentences that are contained within quotes
+    This program handles nested quotations by always continuing if inside multiple sets.
+    Program does not consider a newline characters as a sentence break
+
+
+    Breaking A Sentence Logic
+    -------------------------
     If character is a quotation:
         continue + housekeeping
     elif character begins an abbreviation
@@ -87,7 +71,17 @@ terminating_characters = ["!","?","."], full_stop_characters = ["."]):
                 if at end of quote and starting a new sentence: break
         elif not in quotes
             include closing parenthesis, otherwise break normally
+
+
+    For a more expansive list of abbreviations and capitalized words (names), check out
+    https://github.com/DictionaryHouse/EnglishName/
+    https://github.com/fangpsh/Abbreviations
     """
+
+    in_quotes = [False for _ in range(len(quotations))]
+    result = []
+    open_quotations = [x[0] for x in quotations]
+    close_quotations = [x[1] for x in quotations]
 
     pos = 0
     prev_pos = 0
@@ -126,9 +120,9 @@ terminating_characters = ["!","?","."], full_stop_characters = ["."]):
                     if text[pos+1] in close_quotations:
                         if text[pos+3].islower():
                             pos += 1
-                        elif text[pos+3].isupper() and is_name(text, pos+3, capitalized):
+                        elif text[pos+3].isupper() and is_capitalized(text, pos+3, capitalized):
                             pos += 1
-                        elif text[pos+3].isupper() and not is_name(text, pos+3, capitalized):
+                        elif text[pos+3].isupper() and not is_capitalized(text, pos+3, capitalized):
                             result.append(text[prev_pos:pos+2])
                             pos = pos + 3
                             prev_pos = pos
@@ -157,22 +151,45 @@ terminating_characters = ["!","?","."], full_stop_characters = ["."]):
     return result
 
 def tokenize(filename, output):
+    """Takes input and output file names and splits into list of sentences
+
+    Parameters
+    ----------
+    filename: string
+        name of file we wish to read text from to split
+    output: string
+        name of file to write output to
+
+    Returns
+    -------
+        writes to file each sentence on a new line
+
+    Uses a very simple set of abbreviations and capitalized words as laid out in text files
+    abbreviations.txt and names.txt
+    These files are in the format
+    entry1
+    entry2
+    ...
+    entry3
+    """
+
+    with open("abbreviations.txt", "r") as file:
+        abbr = file.read().splitlines()
+    with open("names.txt", "r") as file:
+        cap = file.read().splitlines()
+
     with open(filename, "r") as file:
         data = file.read()
-    abbr = [ "Mr.", "mr.", "MR.", "Mrs.", "MRS.", "mrs.", "MRs.", "M.", "Dr.", "DR.", "dr.", "Q." "R." ]
-    cap = [ "Mr", "Mrs", "Ramsey", "Lily", "Briscoe", "James", "Paul", "Rayley", "Minta", "Doyle", "Charles",
-        "Tansley", "William", "Bankes", "Augustus", "Carmichael", "Andrew", "Jasper", "Roger", "Prue", "Nancy", "Cam",
-        "McNab", "Macalister", "Scott" ] 
+
     result = split_text(data, abbreviations=abbr, capitalized=cap)
+
     with open(output, "w") as file:
         for sentence in result:
             file.write(sentence + '\n')
 
 def main():
-    #filename = input("Enter filename to split:")
-    #output = input("Enter output file:")
-    filename = "ttl_one_line.txt"
-    output = "test.txt"
+    filename = input("Enter file name to split:")
+    output = input("Enter output file name:")
     tokenize(filename, output)
 
 if __name__ == "__main__":
